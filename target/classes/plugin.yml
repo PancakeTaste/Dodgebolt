@@ -1,3 +1,6 @@
 name: Dodgebolt
 version: '1.0-SNAPSHOT'
 main: me.pancaketaste.dodgebolt.Dodgebolt
+commands:
+  dodgebolt:
+    description: Type the command to view everything.

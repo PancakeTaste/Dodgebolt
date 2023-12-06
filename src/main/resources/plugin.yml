@@ -1,3 +1,6 @@
 name: Dodgebolt
 version: '${project.version}'
 main: me.pancaketaste.dodgebolt.Dodgebolt
+commands:
+  dodgebolt:
+    description: Type the command to view everything.
