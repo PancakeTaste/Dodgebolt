@@ -1,0 +1,3 @@
+name: Dodgebolt
+version: '${project.version}'
+main: me.pancaketaste.dodgebolt.Dodgebolt
