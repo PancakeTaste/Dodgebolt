@@ -1,12 +1,24 @@
 package me.pancaketaste.dodgebolt;
 
+import me.pancaketaste.dodgebolt.arena.Arena;
+import me.pancaketaste.dodgebolt.arena.ArenaManager;
+import me.pancaketaste.dodgebolt.arena.ArenaStatus;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Collection;
+
 public final class Dodgebolt extends JavaPlugin {
+    public static final String PERMISSION_ARENA_CREATE = "dodgebolt.arena.create";
+    public static final String PERMISSION_ARENA_TP = "dodgebolt.arena.tp";
+    public static final String PERMISSION_ARENA_SET_SPAWN = "dodgebolt.arena.setspawn";
+    public static final String PERMISSION_ARENA_DELETE = "dodgebolt.arena.delete";
+
     @Override
     public void onEnable() {
 
@@ -18,20 +30,18 @@ public final class Dodgebolt extends JavaPlugin {
             Player player = (Player) sender;
 
             if (command.getName().equalsIgnoreCase("dodgebolt")) {
+                // No args
                 if (args.length == 0) {
                     sendHelp(player);
                     return true;
                 }
 
-                switch (args[0]) {
+                switch (args[0].toLowerCase()) {
                     case "join":
-                        if (args.length == 1) {
-                            sendHelp(player, "join");
-                            return true;
-                        }
+                        handleJoinCommand(player, args);
                         break;
                     case "leave":
-                        // ...
+                        handleLeaveCommand(player);
                         break;
                     case "arena": {
                         if (args.length == 1) {
@@ -39,57 +49,36 @@ public final class Dodgebolt extends JavaPlugin {
                             return true;
                         }
 
-                        switch (args[1]) {
-                            case "create":
-                                if (args.length == 2) {
-                                    sendHelp(player, "create");
-                                    return true;
-                                }
-                                // ...
+                        switch (args[1].toLowerCase()) {
+                            case "create": {
+                                handleArenaCreateCommand(player, args);
                                 break;
-                            case "info":
-                                if (args.length == 2) {
-                                    sendHelp(player, "info");
-                                    return true;
-                                }
-                                // ...
+                            }
+                            case "list": {
+                                handleArenaListCommand(player);
                                 break;
-                            case "list":
-                                if (args.length == 2) {
-                                    sendHelp(player, "list");
-                                    return true;
-                                }
-                                // ...
+                            }
+                            case "tp": {
+                                handleArenaTpCommand(player, args);
                                 break;
-                            case "addspawn":
-                                if (args.length == 2) {
-                                    sendHelp(player, "addspawn");
-                                    return true;
-                                }
-                                // ...
+                            }
+                            case "setspawn": {
+                                handleSetSpawnCommand(player, args);
                                 break;
-                            case "removespawns":
-                                if (args.length == 2) {
-                                    sendHelp(player, "removespawns");
-                                    return true;
-                                }
-                                // ...
+                            }
+                            case "delete": {
+                                handleArenaDeleteCommand(player, args);
                                 break;
-                            case "delete":
-                                if (args.length == 2) {
-                                    sendHelp(player, "delete");
-                                    return true;
-                                }
-                                // ...
-                                break;
-                            default:
+                            }
+                            default: {
                                 sendHelp(player, "arena");
-                                break;
+                            }
                         }
                         break;
                     }
-                    default:
+                    default: {
                         sendHelp(player);
+                    }
                 }
             }
         } else {
@@ -99,54 +88,232 @@ public final class Dodgebolt extends JavaPlugin {
         return false;
     }
 
+    private void handleJoinCommand(Player player, String[] args) {
+        if (args.length == 1) {
+            sendHelp(player, "join");
+            return;
+        }
+        // ...
+    }
+
+    private void handleLeaveCommand(Player player) {
+        // ...
+    }
+
+    private void handleArenaCreateCommand(Player player, String[] args) {
+        // Permission
+        if (!player.hasPermission(PERMISSION_ARENA_CREATE)) {
+            sendNoPerm(player);
+            return;
+        }
+
+        if (args.length == 2) {
+            sendHelp(player, "create");
+            return;
+        }
+
+        String arenaName = args[2];
+
+        // Check if an arena with the same name already exists
+        if (ArenaManager.getInstance().getArena(arenaName) != null) {
+            player.sendMessage(ChatColor.RED + "An arena with the same name already exists.");
+            return;
+        }
+
+        player.sendMessage("Creating the arena...");
+
+        // Save the arena and create the world
+        Arena arena = new Arena(arenaName);
+        World arenaWorld = arena.createWorld();
+
+        player.sendMessage(ChatColor.GREEN + "Successfully created.");
+        player.teleport(arenaWorld.getSpawnLocation());
+    }
+
+    private void handleArenaListCommand(Player player) {
+        Collection<Arena> arenas = ArenaManager.getInstance().getAllArenas();
+
+        if (arenas.isEmpty()) {
+            player.sendMessage("There are no arenas.");
+            return;
+        }
+
+        player.sendMessage(ChatColor.YELLOW + "List of arenas:");
+        for (Arena arena : arenas) {
+            player.sendMessage(arena.getName());
+        }
+    }
+
+    private void handleArenaTpCommand(Player player, String[] args) {
+        // Permission
+        if (!player.hasPermission(PERMISSION_ARENA_TP)) {
+            sendNoPerm(player);
+            return;
+        }
+
+        if (args.length == 2) {
+            sendHelp(player, "tp");
+            return;
+        }
+
+        String arenaName = args[2];
+        Arena arena = ArenaManager.getInstance().getArena(arenaName);
+
+        // Check if the arena doesn't exist
+        if (arena == null) {
+            player.sendMessage(ChatColor.RED + "This arena doesn't exist.");
+            return;
+        }
+
+        World arenaWorld = Bukkit.getWorld(arena.getWorldName());
+        player.teleport(arenaWorld.getSpawnLocation());
+        player.sendMessage(ChatColor.GREEN + "You've been teleported.");
+    }
+
+    private void handleSetSpawnCommand(Player player, String[] args) {
+        // Permission
+        if (!player.hasPermission(PERMISSION_ARENA_SET_SPAWN)) {
+            sendNoPerm(player);
+            return;
+        }
+
+        if (args.length == 2) {
+            sendHelp(player, "setspawn");
+            return;
+        }
+
+        String teamName = args[2];
+        World playerWorld = player.getWorld();
+        Arena arena = ArenaManager.getInstance().getWorldArena(playerWorld.getName()); // Get the arena by the world name
+
+        // Check if the player is not in an arena
+        if (arena == null) {
+            player.sendMessage(ChatColor.RED + "You are not in an arena.");
+            return;
+        }
+
+        if (teamName.equalsIgnoreCase("blue")) {
+            arena.setBlueSpawn(player.getLocation());
+            player.sendMessage(ChatColor.GREEN + "You set the spawn point for blue team to your current location.");
+        } else if (teamName.equalsIgnoreCase("red")) {
+            arena.setRedSpawn(player.getLocation());
+            player.sendMessage(ChatColor.GREEN + "You set the spawn point for red team to your current location.");
+        } else {
+            // Invalid team name
+            sendHelp(player, "setspawn");
+        }
+    }
+
+    private void handleArenaDeleteCommand(Player player, String[] args) {
+        // Permission
+        if (!player.hasPermission(PERMISSION_ARENA_DELETE)) {
+            sendNoPerm(player);
+            return;
+        }
+
+        if (args.length == 2) {
+            sendHelp(player, "delete");
+            return;
+        }
+
+        String arenaName = args[2];
+        Arena arena = ArenaManager.getInstance().getArena(arenaName);
+
+        // Check if the arena doesn't exist
+        if (arena == null) {
+            player.sendMessage(ChatColor.RED + "This arena doesn't exist.");
+            return;
+        }
+
+        // Check if the arena is in a game
+        if (!arena.getArenaStatus().equals(ArenaStatus.WAITING)) {
+            player.sendMessage(ChatColor.RED + "The arena in currently in use.");
+            return;
+        }
+
+        // Check if there are players in the world
+        World arenaWorld = Bukkit.getWorld(arena.getWorldName());
+        if (!arenaWorld.getPlayers().isEmpty()) {
+            player.sendMessage(ChatColor.RED + "There are players in the arena world.");
+            return;
+        }
+
+        // Delete the arena
+        arena.delete();
+
+        player.sendMessage(ChatColor.GREEN + "Successfully deleted.");
+    }
+
     private void sendHelp(Player player, String... specificCommands) {
         if (specificCommands.length == 0) {
-            player.sendMessage(ChatColor.WHITE + "Dodgebolt Help:");
-            player.sendMessage(ChatColor.YELLOW + "/dodgebolt join" + ChatColor.WHITE + " <arena> - Join queue.");
-            player.sendMessage(ChatColor.YELLOW + "/dodgebolt leave" + ChatColor.WHITE + " - Leave queue.");
-            player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena create" + ChatColor.WHITE + " <name> - Create an arena.");
-            player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena info" + ChatColor.WHITE + " <name> - See information about an arena.");
-            player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena list" + ChatColor.WHITE + " - List all arenas.");
-            player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena addspawn" + ChatColor.WHITE + " <team> - Set a new spawn for a team.");
-            player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena removespawns" + ChatColor.WHITE + " <team> - Reset a spawn locations of a team.");
-            player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena delete" + ChatColor.WHITE + " <name> - Delete an arena.");
+            sendGenericHelp(player);
         } else {
             for (String command : specificCommands) {
-                switch (command.toLowerCase()) {
-                    case "join":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt join" + ChatColor.WHITE + " <arena> - Join queue.");
-                        break;
-                    case "leave":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt leave" + ChatColor.WHITE + " - Leave queue.");
-                        break;
-                    case "arena":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena create" + ChatColor.WHITE + " <name> - Create an arena.");
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena info" + ChatColor.WHITE + " <name> - See information about an arena.");
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena list" + ChatColor.WHITE + " - List all arenas.");
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena addspawn" + ChatColor.WHITE + " <team> - Set a new spawn for a team.");
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena removespawns" + ChatColor.WHITE + " <team> - Reset a spawn locations of a team.");
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena delete" + ChatColor.WHITE + " <name> - Delete an arena.");
-                        break;
-                    case "create":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena create" + ChatColor.WHITE + " <name> - Create an arena.");
-                        break;
-                    case "info":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena info" + ChatColor.WHITE + " <name> - See information about an arena.");
-                        break;
-                    case "list":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena list" + ChatColor.WHITE + " - List all arenas.");
-                        break;
-                    case "addspawn":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena addspawn" + ChatColor.WHITE + " <team> - Set a new spawn for a team.");
-                        break;
-                    case "removespawns":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena removespawns" + ChatColor.WHITE + " <team> - Reset a spawn locations of a team.");
-                        break;
-                    case "delete":
-                        player.sendMessage(ChatColor.YELLOW + "/dodgebolt arena delete" + ChatColor.WHITE + " <name> - Delete an arena.");
-                        break;
-                }
+                sendSpecificHelp(player, command);
             }
         }
+    }
+
+    private void sendGenericHelp(Player player) {
+        player.sendMessage(ChatColor.WHITE + "Dodgebolt Help:");
+        sendCommandHelp(player, "join", "<arena>", "Join queue for the specified arena.");
+        sendCommandHelp(player, "leave", "", "Leave the current queue.");
+        sendCommandHelp(player, "arena", "", "Manage arenas.");
+    }
+
+    private void sendSpecificHelp(Player player, String command) {
+        switch (command.toLowerCase()) {
+            case "join":
+                sendCommandHelp(player, "join", "<arena>", "Join queue for the specified arena.");
+                break;
+            case "leave":
+                sendCommandHelp(player, "leave", "", "Leave the current queue.");
+                break;
+            case "arena":
+                sendArenaHelp(player);
+                break;
+            case "create":
+                sendCommandHelp(player, "arena create", "<name>", "Create an arena with the specified name.");
+                break;
+            case "list":
+                sendCommandHelp(player, "arena list", "", "List all arenas.");
+                break;
+            case "tp":
+                sendCommandHelp(player, "arena tp", "<name>", "Teleport to the specified arena.");
+                break;
+            case "setspawn":
+                sendCommandHelp(player, "arena setspawn", "<team [red|blue]>", "Set the spawn location for the specified team.");
+                break;
+            case "delete":
+                sendCommandHelp(player, "arena delete", "<name>", "Delete the specified arena.");
+                break;
+        }
+    }
+
+    private void sendCommandHelp(Player player, String command, String arg, String desc) {
+        String spacedArg = arg;
+        if (!arg.isEmpty()) spacedArg = " " + arg;
+
+        player.sendMessage(ChatColor.YELLOW + "/dodgebolt " + command + ChatColor.WHITE + spacedArg + " - " + desc);
+    }
+
+    private void sendArenaHelp(Player player) {
+        sendCommandHelp(player, "arena list", "", "List all arenas.");
+        if (player.hasPermission(PERMISSION_ARENA_CREATE)) {
+            sendCommandHelp(player, "arena create", "<name>", "Create an arena with the specified name.");
+        }
+        if (player.hasPermission(PERMISSION_ARENA_TP)) {
+            sendCommandHelp(player, "arena tp", "<name>", "Teleport to the specified arena.");
+        }
+        if (player.hasPermission(PERMISSION_ARENA_SET_SPAWN)) {
+            sendCommandHelp(player, "arena setspawn", "<team [red|blue]>", "Set the spawn location for the specified team.");
+        }
+        if (player.hasPermission(PERMISSION_ARENA_DELETE)) {
+            sendCommandHelp(player, "arena delete", "<name>", "Delete the specified arena.");
+        }
+    }
+
+    private void sendNoPerm(Player player) {
+        player.sendMessage(ChatColor.RED + "You don't have permission to use this command!");
     }
 }

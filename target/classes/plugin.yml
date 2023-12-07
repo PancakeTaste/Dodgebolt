@@ -4,3 +4,4 @@ main: me.pancaketaste.dodgebolt.Dodgebolt
 commands:
   dodgebolt:
     description: Type the command to view everything.
+    aliases: [dbolt]
