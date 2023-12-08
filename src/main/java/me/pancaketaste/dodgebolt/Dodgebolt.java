@@ -16,9 +16,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.sql.SQLException;
 import java.util.Collection;
 
 public final class Dodgebolt extends JavaPlugin {
+    private Database database;
+
     public static final String PERMISSION_ARENA_CREATE = "dodgebolt.arena.create";
     public static final String PERMISSION_ARENA_TP = "dodgebolt.arena.tp";
     public static final String PERMISSION_ARENA_SET_SPAWN = "dodgebolt.arena.setspawn";
@@ -26,11 +29,40 @@ public final class Dodgebolt extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // Connect to SQLite database
+        try {
+            // If the data folder doesn't exist, create it
+            if (!getDataFolder().exists()) {
+                getDataFolder().mkdirs();
+            }
+
+            database = new Database(this, getDataFolder().getAbsolutePath() + "/database.db");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("Failed to connect to the database! " + e.getMessage());
+            Bukkit.getPluginManager().disablePlugin(this);
+        }
+        // Load from database
+        database.loadArenas();
+
         // Events
         getServer().getPluginManager().registerEvents(new PlayerMoveListener(), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(), this);
         getServer().getPluginManager().registerEvents(new EntityDamageByEntityListener(), this);
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(), this);
+    }
+
+    @Override
+    public void onDisable() {
+        try {
+            database.closeConnection();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public Database getDatabase() {
+        return this.database;
     }
 
     @Override
@@ -183,7 +215,8 @@ public final class Dodgebolt extends JavaPlugin {
         player.sendMessage("Creating the arena...");
 
         // Save the arena and create the world
-        Arena arena = new Arena(arenaName);
+        Arena arena = new Arena(this, arenaName, "arena_" + arenaName);
+        arena.create(this);
         World arenaWorld = arena.createWorld();
 
         player.sendMessage(ChatColor.GREEN + "Successfully created.");

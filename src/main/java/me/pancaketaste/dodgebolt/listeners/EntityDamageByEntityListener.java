@@ -36,9 +36,10 @@ public class EntityDamageByEntityListener implements Listener {
                         target.setGameMode(GameMode.SPECTATOR);
 
                         // Winner
-                        shooter.sendMessage("§e§lCongrats! §rYou shot the enemy!");
+                        shooter.sendMessage("§e§lVictory! §rYou shot the enemy!");
                         shooter.playSound(shooter.getLocation(), Sound.ENTITY_FIREWORK_TWINKLE, 1.0f, 1.0f);
 
+                        // Increase score
                         if (arena.getBluePlayer() == shooter) {
                             arena.setBlueScore(arena.getBlueScore() + 1);
                         } else {
