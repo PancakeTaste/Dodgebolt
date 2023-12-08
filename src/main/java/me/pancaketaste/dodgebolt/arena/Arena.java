@@ -5,6 +5,7 @@ import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import xyz.tozymc.spigot.api.title.TitleApi;
 
 import java.util.List;
 
@@ -17,6 +18,9 @@ public class Arena {
     private Location blueSpawn;
     private Location redSpawn;
     private final ArenaQueue arenaQueue;
+    private int blueScore;
+    private int redScore;
+    private int rounds;
 
     public Arena(String name) {
         this.name = name;
@@ -63,8 +67,28 @@ public class Arena {
         return redPlayer;
     }
 
+    public Location getBlueSpawn() {
+        return blueSpawn;
+    }
+
+    public Location getRedSpawn() {
+        return redSpawn;
+    }
+
     public ArenaQueue getQueue() {
         return arenaQueue;
+    }
+
+    public int getBlueScore() {
+        return blueScore;
+    }
+
+    public int getRedScore() {
+        return redScore;
+    }
+
+    public int getRounds() {
+        return rounds;
     }
 
     public void deleteWorld() {
@@ -72,100 +96,163 @@ public class Arena {
 
         if (arenaWorld != null) {
             Bukkit.unloadWorld(arenaWorld, false);
+            deleteWorldFolder(arenaWorld.getWorldFolder().toPath());
+        }
+    }
 
-            // Delete the world folder
-            java.nio.file.Path worldPath = arenaWorld.getWorldFolder().toPath();
-            try {
-                java.nio.file.Files.walk(worldPath)
-                        .sorted(java.util.Comparator.reverseOrder())
-                        .map(java.nio.file.Path::toFile)
-                        .forEach(java.io.File::delete);
-            } catch (java.io.IOException e) {
-                e.printStackTrace();
-            }
+    private void deleteWorldFolder(java.nio.file.Path worldPath) {
+        try {
+            java.nio.file.Files.walk(worldPath)
+                    .sorted(java.util.Comparator.reverseOrder())
+                    .map(java.nio.file.Path::toFile)
+                    .forEach(java.io.File::delete);
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
         }
     }
 
     public void setArenaStatus(ArenaStatus arenaStatus) {
         this.arenaStatus = arenaStatus;
 
+        if (arenaStatus == ArenaStatus.WAITING) {
+            startGame();
+        }
+
         if (arenaStatus == ArenaStatus.STARTING) {
+            initializeGame();
+        }
+
+        if (arenaStatus == ArenaStatus.ENDED) {
+            setRounds(getRounds() + 1);
+
+            Plugin plugin = Dodgebolt.getPlugin(Dodgebolt.class);
+            if (getRounds() >= 3) {
+                Bukkit.getScheduler().runTaskLater(plugin, this::stopGame, 60L);
+            } else {
+                Bukkit.getScheduler().runTaskLater(plugin, () -> setArenaStatus(ArenaStatus.STARTING), 60L);
+            }
+        }
+    }
+
+    private void initializeGame() {
+        if (getRounds() == 0) {
             arenaQueue.dequeue(bluePlayer);
             arenaQueue.dequeue(redPlayer);
             arenaQueue.sendPlayersPositions();
 
-            bluePlayer.sendMessage("Your enemy is " + ChatColor.RED + redPlayer.getDisplayName() + ChatColor.WHITE + ".");
-            redPlayer.sendMessage("Your enemy is " + ChatColor.BLUE + bluePlayer.getDisplayName() + ChatColor.WHITE + ".");
-
-            bluePlayer.setGameMode(GameMode.SURVIVAL);
-            redPlayer.setGameMode(GameMode.SURVIVAL);
-
-            bluePlayer.setHealth(20);
-            redPlayer.setHealth(20);
-
-            bluePlayer.getInventory().clear();
-            redPlayer.getInventory().clear();
-
-            bluePlayer.teleport(blueSpawn);
-            redPlayer.teleport(redSpawn);
-
-            // Countdown
-            Plugin plugin = Dodgebolt.getPlugin(Dodgebolt.class);
-            final int[] countdown = {6};
-
-            Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-                if (countdown[0] == 3) {
-                    bluePlayer.sendMessage("The game starts in " + ChatColor.YELLOW + "3" + ChatColor.WHITE + " seconds!");
-                    redPlayer.sendMessage("The game starts in " + ChatColor.YELLOW + "3" + ChatColor.WHITE + " seconds!");
-                }
-                if (countdown[0] > 0 && countdown[0] <= 3) {
-                    bluePlayer.playSound(bluePlayer.getLocation(), Sound.BLOCK_NOTE_PLING, 1.0f, 1.0f);
-                    redPlayer.playSound(redPlayer.getLocation(), Sound.BLOCK_NOTE_PLING, 1.0f, 1.0f);
-                } else if (countdown[0] == 0) {
-                    bluePlayer.playSound(bluePlayer.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
-                    redPlayer.playSound(redPlayer.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
-
-                    // Give the bow and arrows to the players
-                    ItemStack BowItem = new ItemStack(Material.BOW);
-                    bluePlayer.getInventory().addItem(BowItem);
-                    redPlayer.getInventory().addItem(BowItem);
-                    ItemStack ArrowsItem = new ItemStack(Material.ARROW, 3);
-                    bluePlayer.getInventory().addItem(ArrowsItem);
-                    redPlayer.getInventory().addItem(ArrowsItem);
-
-                    setArenaStatus(ArenaStatus.IN_PROGRESS);
-                }
-                countdown[0]--;
-            }, 0L, 20L);
+            sendPlayersMessages();
         }
+        cleanupPlayers();
 
-        if (arenaStatus == ArenaStatus.ENDED) {
-            // End in 3 seconds
-            Plugin plugin = Dodgebolt.getPlugin(Dodgebolt.class);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                bluePlayer.setGameMode(GameMode.SURVIVAL);
-                redPlayer.setGameMode(GameMode.SURVIVAL);
+        bluePlayer.teleport(blueSpawn);
+        redPlayer.teleport(redSpawn);
 
-                bluePlayer.setHealth(20);
-                redPlayer.setHealth(20);
+        startCountdown();
+    }
 
-                bluePlayer.getInventory().clear();
-                redPlayer.getInventory().clear();
+    private void sendPlayersMessages() {
+        bluePlayer.sendMessage("Your enemy is " + ChatColor.RED + redPlayer.getDisplayName() + ChatColor.WHITE + ".");
+        redPlayer.sendMessage("Your enemy is " + ChatColor.BLUE + bluePlayer.getDisplayName() + ChatColor.WHITE + ".");
+    }
 
-                World world = Bukkit.getWorld("world");
-                bluePlayer.teleport(world.getSpawnLocation());
-                redPlayer.teleport(world.getSpawnLocation());
+    private void startCountdown() {
+        Plugin plugin = Dodgebolt.getPlugin(Dodgebolt.class);
+        final int[] countdown = (getRounds() == 0) ? new int[]{10} : new int[]{3};
 
-                setArenaStatus(ArenaStatus.WAITING);
-            }, 60L);
-        }
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (countdown[0] > 0 && countdown[0] <= 3) {
+                sendCountdownTitle(countdown[0]);
+
+                bluePlayer.playSound(bluePlayer.getLocation(), Sound.BLOCK_NOTE_PLING, 1.0f, 1.0f);
+                redPlayer.playSound(redPlayer.getLocation(), Sound.BLOCK_NOTE_PLING, 1.0f, 1.0f);
+            } else if (countdown[0] == 0) {
+                // Give bow and arrows
+                ItemStack bowItem = new ItemStack(Material.BOW);
+                ItemStack arrowsItem = new ItemStack(Material.ARROW, 32);
+
+                bluePlayer.getInventory().addItem(bowItem, arrowsItem);
+                redPlayer.getInventory().addItem(bowItem, arrowsItem);
+
+                //
+                setArenaStatus(ArenaStatus.IN_PROGRESS);
+
+                // Play level up sound
+                bluePlayer.playSound(bluePlayer.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+                redPlayer.playSound(redPlayer.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+            }
+            countdown[0]--;
+        }, 0L, 20L);
+    }
+
+    private void sendCountdownTitle(int count) {
+        String countdownColor = getCountdownColor(count);
+        TitleApi.sendTitle(bluePlayer, countdownColor + count, "", 2, 16, 2);
+        TitleApi.sendTitle(redPlayer, countdownColor + count, "", 2, 16, 2);
+    }
+
+    private String getCountdownColor(int count) {
+        String countdownColor = "§a§l";
+        if (count == 1) countdownColor = "§c§l";
+        else if (count == 2) countdownColor = "§e§l";
+        return countdownColor;
     }
 
     public void startGame() {
         List<Player> firstTwoPlayers = arenaQueue.getFirstTwoPlayers();
-        setBluePlayer(firstTwoPlayers.get(0));
-        setRedPlayer(firstTwoPlayers.get(1));
-        setArenaStatus(ArenaStatus.STARTING);
+
+        if (firstTwoPlayers.size() >= 2) {
+            setBluePlayer(firstTwoPlayers.get(0));
+            setRedPlayer(firstTwoPlayers.get(1));
+            setArenaStatus(ArenaStatus.STARTING);
+        }
+    }
+
+    public void stopGame() {
+        // Announce the winner
+        if (getRounds() >= 3) {
+            if (getBlueScore() > getRedScore()) {
+                bluePlayer.sendMessage(ChatColor.BLUE + bluePlayer.getDisplayName() + ChatColor.WHITE + " is the winner!");
+                redPlayer.sendMessage(ChatColor.BLUE + bluePlayer.getDisplayName() + ChatColor.WHITE + " is the winner!");
+            } else {
+                bluePlayer.sendMessage(ChatColor.RED + redPlayer.getDisplayName() + ChatColor.WHITE + " is the winner!");
+                redPlayer.sendMessage(ChatColor.RED + redPlayer.getDisplayName() + ChatColor.WHITE + " is the winner!");
+            }
+        }
+
+        setBlueScore(0);
+        setRedScore(0);
+        setRounds(0);
+
+        cleanupPlayers();
+
+        World world = Bukkit.getWorld("world");
+        bluePlayer.teleport(world.getSpawnLocation());
+        redPlayer.teleport(world.getSpawnLocation());
+
+        setBluePlayer(null);
+        setRedPlayer(null);
+
+        setArenaStatus(ArenaStatus.WAITING);
+    }
+
+    private void cleanupPlayers() {
+        bluePlayer.setGameMode(GameMode.SURVIVAL);
+        redPlayer.setGameMode(GameMode.SURVIVAL);
+
+        bluePlayer.setHealth(20);
+        redPlayer.setHealth(20);
+
+        // Clear inventory
+        bluePlayer.getInventory().clear();
+        redPlayer.getInventory().clear();
+    }
+
+    public void unexpectedStop() {
+        String message = ChatColor.RED + "Your enemy disconnected. The match has been canceled.";
+        bluePlayer.sendMessage(message);
+        redPlayer.sendMessage(message);
+
+        stopGame();
     }
 
     public void setBluePlayer(Player bluePlayer) {
@@ -182,5 +269,17 @@ public class Arena {
 
     public void setRedSpawn(Location redSpawn) {
         this.redSpawn = redSpawn;
+    }
+
+    public void setBlueScore(int blueScore) {
+        this.blueScore = blueScore;
+    }
+
+    public void setRedScore(int redScore) {
+        this.redScore = redScore;
+    }
+
+    public void setRounds(int rounds) {
+        this.rounds = rounds;
     }
 }

@@ -44,9 +44,19 @@ public class ArenaManager {
         return optionalArena.orElse(null);
     }
 
+    // This function returns the arena where the player is in the game.
     public Arena getPlayerArena(Player player) {
         return arenas.values().stream()
                 .filter(arena -> arena.getBluePlayer() == player || arena.getRedPlayer() == player)
+                .findFirst()
+                .orElse(null);
+    }
+
+    // This function returns the arena where the player is in a queue.
+    public Arena getPlayerQueueArena(Player player) {
+        return arenas.keySet().stream()
+                .map(this::getArena)
+                .filter(arena -> arena.getQueue().getPlayerPosition(player) != 0)
                 .findFirst()
                 .orElse(null);
     }

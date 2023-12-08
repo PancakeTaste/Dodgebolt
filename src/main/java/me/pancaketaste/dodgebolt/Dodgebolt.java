@@ -7,6 +7,7 @@ import me.pancaketaste.dodgebolt.arena.ArenaQueue;
 import me.pancaketaste.dodgebolt.listeners.EntityDamageByEntityListener;
 import me.pancaketaste.dodgebolt.listeners.PlayerJoinListener;
 import me.pancaketaste.dodgebolt.listeners.PlayerMoveListener;
+import me.pancaketaste.dodgebolt.listeners.PlayerQuitListener;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -29,6 +30,7 @@ public final class Dodgebolt extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerMoveListener(), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(), this);
         getServer().getPluginManager().registerEvents(new EntityDamageByEntityListener(), this);
+        getServer().getPluginManager().registerEvents(new PlayerQuitListener(), this);
     }
 
     @Override
@@ -107,12 +109,25 @@ public final class Dodgebolt extends JavaPlugin {
             return;
         }
 
+        // Check if the player is in a queue
+        Arena queueArena = ArenaManager.getInstance().getPlayerQueueArena(player);
+        if (queueArena != null) {
+            player.sendMessage(ChatColor.RED + "You are already in a queue. Leave it first.");
+            return;
+        }
+
         String arenaName = args[1];
         Arena arena = ArenaManager.getInstance().getArena(arenaName);
 
         // Check if the arena doesn't exist
         if (arena == null) {
             player.sendMessage(ChatColor.RED + "This arena doesn't exist.");
+            return;
+        }
+
+        // Check if the team spawn points are set
+        if (arena.getBlueSpawn() == null || arena.getRedSpawn() == null) {
+            player.sendMessage(ChatColor.RED + "The arena is currently not configured. The team spawn points have not been established.");
             return;
         }
 
@@ -133,6 +148,16 @@ public final class Dodgebolt extends JavaPlugin {
     }
 
     private void handleLeaveCommand(Player player) {
+        Arena queueArena = ArenaManager.getInstance().getPlayerQueueArena(player);
+
+        // Check if the player is not in a queue
+        if (queueArena == null) {
+            player.sendMessage(ChatColor.RED + "You are not in a queue.");
+            return;
+        }
+
+        queueArena.getQueue().dequeue(player);
+        player.sendMessage("You have been excluded from the queue.");
     }
 
     private void handleArenaCreateCommand(Player player, String[] args) {
@@ -173,9 +198,16 @@ public final class Dodgebolt extends JavaPlugin {
             return;
         }
 
-        player.sendMessage(ChatColor.YELLOW + "List of arenas:");
+        player.sendMessage("List of arenas:");
         for (Arena arena : arenas) {
-            player.sendMessage(arena.getName());
+            ArenaStatus arenaStatus = arena.getArenaStatus();
+            String arenaStatusDisplay = ChatColor.GRAY + "Waiting for players";
+
+            if (arenaStatus == ArenaStatus.STARTING || arenaStatus == ArenaStatus.IN_PROGRESS || arenaStatus == ArenaStatus.ENDED) {
+                arenaStatusDisplay = ChatColor.RED + "Occupied";
+            }
+
+            player.sendMessage( ChatColor.YELLOW + arena.getName() + ChatColor.WHITE + " - " + arenaStatusDisplay);
         }
     }
 
@@ -260,7 +292,7 @@ public final class Dodgebolt extends JavaPlugin {
             return;
         }
 
-        // Check if the arena is in a game
+        // Check if the arena is occupied
         if (!arena.getArenaStatus().equals(ArenaStatus.WAITING)) {
             player.sendMessage(ChatColor.RED + "The arena in currently in use.");
             return;

@@ -21,25 +21,31 @@ public class EntityDamageByEntityListener implements Listener {
             Arrow arrow = (Arrow) e.getDamager();
 
             if (arrow.getShooter() instanceof Player) {
-                Player shooterPlayer = (Player) arrow.getShooter();
+                Player shooter = (Player) arrow.getShooter();
 
                 if (e.getEntity() instanceof Player) {
-                    Player targetPlayer = (Player) e.getEntity();
+                    Player target = (Player) e.getEntity();
 
-                    Arena shooterArena = ArenaManager.getInstance().getPlayerArena(shooterPlayer);
+                    Arena arena = ArenaManager.getInstance().getPlayerArena(shooter);
 
-                    // Check if the shooter is in an arena
-                    if (shooterArena != null) {
-                        if (shooterArena.getArenaStatus() == ArenaStatus.IN_PROGRESS) {
-                            targetPlayer.setGameMode(GameMode.SPECTATOR);
-                            targetPlayer.sendMessage("§c§lDefeat! §rYou've been shot.");
-                            targetPlayer.playSound(targetPlayer.getLocation(), Sound.ENTITY_PLAYER_DEATH, 1.0f, 1.0f);
+                    if (arena != null) {
+                        // Loser
+                        target.getInventory().clear();
+                        target.sendMessage("§c§lDefeat! §rYou've been shot.");
+                        target.playSound(target.getLocation(), Sound.ENTITY_PLAYER_DEATH, 1.0f, 1.0f);
+                        target.setGameMode(GameMode.SPECTATOR);
 
-                            shooterPlayer.sendMessage("§e§lCongrats! §rYou shot the enemy!");
-                            shooterPlayer.playSound(shooterPlayer.getLocation(), Sound.ENTITY_FIREWORK_TWINKLE, 1.0f, 1.0f);
+                        // Winner
+                        shooter.sendMessage("§e§lCongrats! §rYou shot the enemy!");
+                        shooter.playSound(shooter.getLocation(), Sound.ENTITY_FIREWORK_TWINKLE, 1.0f, 1.0f);
 
-                            shooterArena.setArenaStatus(ArenaStatus.ENDED);
+                        if (arena.getBluePlayer() == shooter) {
+                            arena.setBlueScore(arena.getBlueScore() + 1);
+                        } else {
+                            arena.setRedScore(arena.getRedScore() + 1);
                         }
+
+                        arena.setArenaStatus(ArenaStatus.ENDED);
                     }
                 }
             }

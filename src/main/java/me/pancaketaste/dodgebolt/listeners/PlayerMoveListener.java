@@ -12,11 +12,12 @@ public class PlayerMoveListener implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
         Player player = e.getPlayer();
-        Arena playerArena = ArenaManager.getInstance().getPlayerArena(player);
+        Arena arena = ArenaManager.getInstance().getPlayerArena(player);
 
-        // Check if the player is in an arena
-        if (playerArena != null) {
-            if (playerArena.getArenaStatus() == ArenaStatus.STARTING) e.setCancelled(true);
+        if (arena != null) {
+            if (arena.getArenaStatus() == ArenaStatus.STARTING) {
+                e.setCancelled(true);
+            }
         }
     }
 }
