@@ -4,7 +4,7 @@
 
 DodgeBolt is a Spigot plugin that introduces a fun and fast-paced 1v1 dodgeball-style minigame to your Minecraft server. Players use arrows to eliminate opponents, and the last one standing in most rounds emerges as the winner.
 
-[![Alt text](https://img.youtube.com/vi/z63Hn3OfO98/0.jpg)](https://www.youtube.com/watch?v=z63Hn3OfO98)
+[![Video](https://img.youtube.com/vi/z63Hn3OfO98/0.jpg)](https://www.youtube.com/watch?v=z63Hn3OfO98)
 
 ## Installation
 
