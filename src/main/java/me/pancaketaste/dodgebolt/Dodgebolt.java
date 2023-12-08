@@ -3,6 +3,10 @@ package me.pancaketaste.dodgebolt;
 import me.pancaketaste.dodgebolt.arena.Arena;
 import me.pancaketaste.dodgebolt.arena.ArenaManager;
 import me.pancaketaste.dodgebolt.arena.ArenaStatus;
+import me.pancaketaste.dodgebolt.arena.ArenaQueue;
+import me.pancaketaste.dodgebolt.listeners.EntityDamageByEntityListener;
+import me.pancaketaste.dodgebolt.listeners.PlayerJoinListener;
+import me.pancaketaste.dodgebolt.listeners.PlayerMoveListener;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -21,7 +25,10 @@ public final class Dodgebolt extends JavaPlugin {
 
     @Override
     public void onEnable() {
-
+        // Events
+        getServer().getPluginManager().registerEvents(new PlayerMoveListener(), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(), this);
+        getServer().getPluginManager().registerEvents(new EntityDamageByEntityListener(), this);
     }
 
     @Override
@@ -93,11 +100,39 @@ public final class Dodgebolt extends JavaPlugin {
             sendHelp(player, "join");
             return;
         }
-        // ...
+
+        // Check if the player is in a game
+        if (ArenaManager.getInstance().getPlayerArena(player) != null) {
+            player.sendMessage(ChatColor.RED + "You are in a game.");
+            return;
+        }
+
+        String arenaName = args[1];
+        Arena arena = ArenaManager.getInstance().getArena(arenaName);
+
+        // Check if the arena doesn't exist
+        if (arena == null) {
+            player.sendMessage(ChatColor.RED + "This arena doesn't exist.");
+            return;
+        }
+
+        // Add the player in the arena queue
+        ArenaQueue arenaQueue = arena.getQueue();
+        arenaQueue.enqueue(player);
+
+        int queuePosition = arenaQueue.getPlayerPosition(player);
+        player.sendMessage("You have been added to the waiting queue.");
+        player.sendMessage("You are in position " + ChatColor.YELLOW + queuePosition + ChatColor.WHITE + ".");
+
+        // Begin the game only if there are two players waiting and the arena is empty.
+        if (queuePosition == 2) {
+            if (arena.getArenaStatus() == ArenaStatus.WAITING) {
+                arena.startGame();
+            }
+        }
     }
 
     private void handleLeaveCommand(Player player) {
-        // ...
     }
 
     private void handleArenaCreateCommand(Player player, String[] args) {
@@ -194,10 +229,10 @@ public final class Dodgebolt extends JavaPlugin {
 
         if (teamName.equalsIgnoreCase("blue")) {
             arena.setBlueSpawn(player.getLocation());
-            player.sendMessage(ChatColor.GREEN + "You set the spawn point for blue team to your current location.");
+            player.sendMessage(ChatColor.GREEN + "You set the spawn point for " + ChatColor.BLUE + "blue" + ChatColor.GREEN + " team to your current location.");
         } else if (teamName.equalsIgnoreCase("red")) {
             arena.setRedSpawn(player.getLocation());
-            player.sendMessage(ChatColor.GREEN + "You set the spawn point for red team to your current location.");
+            player.sendMessage(ChatColor.GREEN + "You set the spawn point for " + ChatColor.RED + "red" + ChatColor.GREEN + " team to your current location.");
         } else {
             // Invalid team name
             sendHelp(player, "setspawn");

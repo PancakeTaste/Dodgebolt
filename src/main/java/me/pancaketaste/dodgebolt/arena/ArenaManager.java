@@ -1,5 +1,7 @@
 package me.pancaketaste.dodgebolt.arena;
 
+import org.bukkit.entity.Player;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,5 +42,12 @@ public class ArenaManager {
                 .findFirst();
 
         return optionalArena.orElse(null);
+    }
+
+    public Arena getPlayerArena(Player player) {
+        return arenas.values().stream()
+                .filter(arena -> arena.getBluePlayer() == player || arena.getRedPlayer() == player)
+                .findFirst()
+                .orElse(null);
     }
 }

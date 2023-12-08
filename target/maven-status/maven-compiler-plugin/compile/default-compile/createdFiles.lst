@@ -1,4 +1,8 @@
-me\pancaketaste\dodgebolt\arena\Arena.class
+me\pancaketaste\dodgebolt\arena\ArenaQueue.class
 me\pancaketaste\dodgebolt\arena\ArenaManager.class
 me\pancaketaste\dodgebolt\Dodgebolt.class
 me\pancaketaste\dodgebolt\arena\ArenaStatus.class
+me\pancaketaste\dodgebolt\arena\Arena.class
+me\pancaketaste\dodgebolt\listeners\PlayerJoinListener.class
+me\pancaketaste\dodgebolt\listeners\EntityDamageByEntityListener.class
+me\pancaketaste\dodgebolt\listeners\PlayerMoveListener.class
