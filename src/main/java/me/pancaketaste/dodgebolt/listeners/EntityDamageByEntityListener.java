@@ -32,7 +32,6 @@ public class EntityDamageByEntityListener implements Listener {
                         // Loser
                         target.getInventory().clear();
                         target.sendMessage("§c§lDefeat! §rYou've been shot.");
-                        target.playSound(target.getLocation(), Sound.ENTITY_PLAYER_DEATH, 1.0f, 1.0f);
                         target.setGameMode(GameMode.SPECTATOR);
 
                         // Winner
