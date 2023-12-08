@@ -10,7 +10,7 @@ import xyz.tozymc.spigot.api.title.TitleApi;
 import java.util.List;
 
 public class Arena {
-    private Dodgebolt dodgeboltPlugin;
+    private Dodgebolt plugin;
     private final String name;
     private final String worldName;
     private ArenaStatus arenaStatus;
@@ -23,8 +23,8 @@ public class Arena {
     private int redScore;
     private int rounds;
 
-    public Arena(Dodgebolt dodgeboltPlugin, String name, String worldName) {
-        this.dodgeboltPlugin = dodgeboltPlugin;
+    public Arena(Dodgebolt plugin, String name, String worldName) {
+        this.plugin = plugin;
 
         this.name = name;
         this.worldName = worldName;
@@ -34,9 +34,9 @@ public class Arena {
         ArenaManager.getInstance().addArena(this);
     }
 
-    public void create(Dodgebolt dodgeboltPlugin) {
+    public void create(Dodgebolt plugin) {
         // Insert into the database
-        this.dodgeboltPlugin.getDatabase().insertArena(getName(), getWorldName());
+        this.plugin.getDatabase().insertArena(getName(), getWorldName());
     }
 
     public void delete() {
@@ -44,7 +44,7 @@ public class Arena {
         ArenaManager.getInstance().removeArena(this);
 
         // Delete from the database
-        this.dodgeboltPlugin.getDatabase().deleteArena(getName());
+        this.plugin.getDatabase().deleteArena(getName());
     }
 
     public String getName() {
@@ -287,7 +287,7 @@ public class Arena {
 
     // Update team spawn points in the database
     private void saveSpawns() {
-        this.dodgeboltPlugin.getDatabase().updateArenaSpawns(getName(), getBlueSpawn(), getRedSpawn());
+        this.plugin.getDatabase().updateArenaSpawns(getName(), getBlueSpawn(), getRedSpawn());
     }
 
     public void setBlueScore(int blueScore) {

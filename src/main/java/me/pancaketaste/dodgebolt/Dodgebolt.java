@@ -159,7 +159,7 @@ public final class Dodgebolt extends JavaPlugin {
 
         // Check if the team spawn points are set
         if (arena.getBlueSpawn() == null || arena.getRedSpawn() == null) {
-            player.sendMessage(ChatColor.RED + "The arena is currently not configured. The team spawn points have not been established.");
+            player.sendMessage(ChatColor.RED + "The arena is currently not fully configured. The team spawn points have not been established.");
             return;
         }
 

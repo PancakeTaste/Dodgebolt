@@ -2,16 +2,18 @@ package me.pancaketaste.dodgebolt;
 
 import me.pancaketaste.dodgebolt.arena.Arena;
 import me.pancaketaste.dodgebolt.utils.LocationUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.WorldCreator;
 
 import java.sql.*;
 
 public class Database {
-    private final Dodgebolt dodgeboltPlugin;
+    private final Dodgebolt plugin;
     private static Connection connection = null;
 
-    public Database(Dodgebolt dodgeboltPlugin, String path) throws SQLException {
-        this.dodgeboltPlugin = dodgeboltPlugin;
+    public Database(Dodgebolt plugin, String path) throws SQLException {
+        this.plugin = plugin;
 
         connection = DriverManager.getConnection("jdbc:sqlite:" + path);
         try (Statement statement = connection.createStatement()) {
@@ -83,9 +85,10 @@ public class Database {
                 String blueSpawn = resultSet.getString("blueSpawn");
                 String redSpawn = resultSet.getString("redSpawn");
 
-                Arena arena = new Arena(dodgeboltPlugin, arenaName, worldName);
+                Arena arena = new Arena(plugin, arenaName, worldName);
                 arena.setBlueSpawn(LocationUtils.stringToLocation(blueSpawn));
                 arena.setRedSpawn(LocationUtils.stringToLocation(redSpawn));
+                arena.createWorld();
             }
         } catch (SQLException e) {
             e.printStackTrace();
